@@ -1,6 +1,10 @@
 .env
 .env.example
-
+.env.local
+.env.*.local
 node_modules
 yarn.lock
 yarn-error.log
+.github
+.git
+.log
