@@ -184,17 +184,48 @@ export const addDownloadLink = async (req, res) => {
 // Suppression d'une demande
 export const deleteRequest = async (req, res) => {
   try {
-    const { id } = req.params;
-    
-    const request = await BookRequest.findByIdAndDelete(id);
+    const request = await BookRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ error: 'Demande non trouvée.' });
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la demande ou un administrateur
+    if (request.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Non autorisé.' });
+    }
+
+    await request.remove();
+    res.json({ message: 'Demande supprimée avec succès.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la suppression de la demande.' });
+  }
+};
+
+// Marquer une demande comme téléchargée
+export const markAsDownloaded = async (req, res) => {
+  try {
+    const request = await BookRequest.findById(req.params.id);
     
     if (!request) {
-      return res.status(404).json({ error: 'Demande non trouvée' });
+      return res.status(404).json({ error: 'Demande non trouvée.' });
     }
-    
-    res.json({ message: 'Demande supprimée avec succès' });
+
+    // Vérifier que l'utilisateur est le propriétaire de la demande ou un administrateur
+    if (request.user.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Non autorisé.' });
+    }
+
+    // Mettre à jour la date de téléchargement
+    request.downloadedAt = new Date();
+    await request.save();
+
+    res.json({ 
+      success: true, 
+      downloadedAt: request.downloadedAt,
+      message: 'Téléchargement enregistré avec succès.' 
+    });
   } catch (error) {
-    console.error('Erreur lors de la suppression de la demande:', error);
-    res.status(500).json({ error: 'Erreur lors de la suppression de la demande' });
+    console.error('Erreur lors du marquage comme téléchargé:', error);
+    res.status(500).json({ error: 'Erreur lors du marquage comme téléchargé.' });
   }
 };

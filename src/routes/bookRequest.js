@@ -5,7 +5,8 @@ import {
   getAllRequests,
   updateRequestStatus,
   addDownloadLink,
-  deleteRequest
+  deleteRequest,
+  markAsDownloaded
 } from '../controllers/bookRequestController.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
@@ -25,6 +26,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, updateRequestStatus);
 
 // Ajouter un lien de téléchargement à une demande (admin uniquement)
 router.patch('/:id/download-link', requireAuth, requireAdmin, addDownloadLink);
+router.put('/:id/mark-downloaded', requireAuth, markAsDownloaded);
 router.delete('/:id', requireAuth, requireAdmin, deleteRequest);
 
 export default router;

@@ -44,6 +44,11 @@ const bookRequestSchema = new mongoose.Schema({
     default: 'pending',
     required: true 
   },
+  // Suivi des téléchargements
+  downloadedAt: {
+    type: Date,
+    default: null
+  },
   // Suivi des notifications vues par l'utilisateur
   notifications: {
     completed: {
