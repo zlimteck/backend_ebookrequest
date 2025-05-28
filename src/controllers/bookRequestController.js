@@ -184,7 +184,10 @@ export const addDownloadLink = async (req, res) => {
 // Suppression d'une demande
 export const deleteRequest = async (req, res) => {
   try {
-    const request = await BookRequest.findById(req.params.id);
+    const { id } = req.params;
+    
+    // Vérifier d'abord si la demande existe et si l'utilisateur a les droits
+    const request = await BookRequest.findById(id);
     if (!request) {
       return res.status(404).json({ error: 'Demande non trouvée.' });
     }
@@ -194,10 +197,16 @@ export const deleteRequest = async (req, res) => {
       return res.status(403).json({ error: 'Non autorisé.' });
     }
 
-    await request.remove();
+    // Supprimer la demande
+    await BookRequest.findByIdAndDelete(id);
+    
     res.json({ message: 'Demande supprimée avec succès.' });
   } catch (error) {
-    res.status(500).json({ error: 'Erreur lors de la suppression de la demande.' });
+    console.error('Erreur lors de la suppression de la demande:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la suppression de la demande.',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
