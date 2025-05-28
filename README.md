@@ -1,15 +1,38 @@
-# img_backend_ebookrequest_docker
+# Backend for EbookRequest
 
 [![Docker Image Size](https://badgen.net/docker/size/zlimteck/ebookrequest-backend?icon=docker&label=image%20size)](https://hub.docker.com/r/zlimteck/ebookrequest-backend/)
 [![Docker Pulls](https://badgen.net/docker/pulls/zlimteck/ebookrequest-backend?icon=docker&label=pulls)](https://hub.docker.com/r/zlimteck/ebookrequest-backend/)
 [![Docker Stars](https://badgen.net/docker/stars/zlimteck/ebookrequest-backend?icon=docker&label=stars)](https://hub.docker.com/r/zlimteck/ebookrequest-backend/)
+[![Docker Build & Push](https://github.com/zlimteck/backend_ebookrequest/actions/workflows/docker-image.yml/badge.svg)](https://github.com/zlimteck/backend_ebookrequest/actions/workflows/docker-image.yml)
 
 ![image](https://zupimages.net/up/25/20/wdmb.png)
 
-Backend server for EbookRequest web app
+A robust and scalable backend for managing book requests, built with Node.js and Express.
+Provides API endpoints for seamless integration with the frontend and supports authentication, email notifications, and book data retrieval.
 
-## 🐳 Docker Compose:
-```bash
+---
+
+## Features
+
+- ✅ User authentication with JWT  
+- ✅ Google Books API integration  
+- ✅ Email notifications via SMTP  
+- ✅ Admin initialization script (`init-admin`)  
+- ✅ Docker-ready for easy deployment  
+
+## Technologies
+
+- **Node.js** (Express.js)  
+- **MongoDB**  
+- **Docker**
+
+---
+
+## How to Run
+
+Using **Docker-Compose**:
+
+```yaml
 services:
   backend:
     image: zlimteck/ebookrequest-backend:latest
@@ -39,9 +62,14 @@ networks:
   app-network:
     driver: bridge
 ```
+---
 
+## Create an Admin Account
 
-## Create admin account: 
-```bash 
+Once the container is running, execute this command:
+
+```bash
 docker exec -it [NOM_OU_ID_DU_CONTENEUR_BACKEND] npm run init-admin
 ```
+
+---
