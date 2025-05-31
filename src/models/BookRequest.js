@@ -40,7 +40,7 @@ const bookRequestSchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ['pending', 'completed'],
+    enum: ['pending', 'completed', 'canceled'],
     default: 'pending',
     required: true 
   },
@@ -55,8 +55,15 @@ const bookRequestSchema = new mongoose.Schema({
       seen: { type: Boolean, default: false },
       seenAt: { type: Date }
     },
+    canceled: {
+      seen: { type: Boolean, default: false },
+      seenAt: { type: Date },
+      reason: { type: String }
+    }
   },
   completedAt: { type: Date },
+  canceledAt: { type: Date },
+  cancelReason: { type: String },
   createdAt: { type: Date, default: Date.now },
 }, {
   timestamps: true

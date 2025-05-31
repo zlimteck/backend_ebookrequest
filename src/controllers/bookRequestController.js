@@ -1,6 +1,6 @@
 import BookRequest from '../models/BookRequest.js';
 import User from '../models/User.js';
-import { sendBookCompletedEmail } from '../services/emailService.js';
+import { sendBookCompletedEmail, sendRequestCanceledEmail } from '../services/emailService.js';
 import pushoverService from '../services/pushoverService.js';
 
 // Création d'une nouvelle demande de livre
@@ -111,23 +111,84 @@ export const getAllRequests = async (req, res) => {
 export const updateRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reason } = req.body;
     
-    if (!['pending', 'completed'].includes(status)) {
+    if (!['pending', 'completed', 'canceled'].includes(status)) {
       return res.status(400).json({ error: 'Statut invalide' });
+    }
+    
+    // Vérification de la raison d'annulation si le statut est 'canceled'
+    if (status === 'canceled' && (!reason || reason.trim() === '')) {
+      return res.status(400).json({ error: 'Une raison est requise pour annuler une demande' });
+    }
+    
+    const updateData = {
+      status,
+      ...(status === 'completed' && { completedAt: new Date() }),
+      ...(status === 'canceled' && { 
+        canceledAt: new Date(),
+        cancelReason: reason
+      })
+    };
+    
+    // Si on réactive une demande annulée, on nettoie les champs d'annulation
+    if (status === 'pending') {
+      updateData.canceledAt = null;
+      updateData.cancelReason = undefined;
     }
     
     const request = await BookRequest.findByIdAndUpdate(
       id,
-      { 
-        status,
-        ...(status === 'completed' && { completedAt: new Date() })
-      },
+      updateData,
       { new: true }
     );
     
     if (!request) {
       return res.status(404).json({ error: 'Demande non trouvée' });
+    }
+    
+    // Envoyer une notification Pushover pour les annulations
+    if (status === 'canceled' && request.user) {
+      try {
+        const user = await User.findById(request.user);
+        if (user) {
+          // Envoyer une notification Pushover
+          await pushoverService.sendNotification(
+            '❌ Demande annulée',
+            `Votre demande pour le livre a été annulée.
+            
+📖 Titre: ${request.title}
+✍️ Auteur: ${request.author}
+📝 Raison: ${reason}`,
+            {
+              priority: 0,
+              sound: 'falling',
+              url: `${process.env.FRONTEND_URL}/dashboard`,
+              url_title: 'Voir le tableau de bord',
+              html: 1
+            }
+          );
+
+          // Envoyer un email de notification d'annulation
+          try {
+            await sendRequestCanceledEmail(
+              {
+                email: user.email,
+                username: user.username
+              },
+              {
+                title: request.title,
+                author: request.author,
+                cancelReason: reason
+              }
+            );
+          } catch (emailError) {
+            console.error('Erreur lors de l\'envoi de l\'email d\'annulation:', emailError);
+          }
+        }
+      } catch (pushoverError) {
+        console.error('Erreur lors de l\'envoi de la notification Pushover:', pushoverError);
+      }
     }
     
     res.json(request);

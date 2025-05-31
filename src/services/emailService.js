@@ -161,6 +161,50 @@ export const sendVerificationEmail = async (email, token, username = 'Utilisateu
   }
 };
 
+// Envoie une notification d'annulation de demande
+export const sendRequestCanceledEmail = async (user, bookRequest) => {
+  if (!user?.email || !bookRequest) {
+    console.error('Paramètres manquants pour l\'envoi d\'email d\'annulation:', { user, bookRequest });
+    throw new Error('Paramètres manquants pour l\'envoi d\'email d\'annulation');
+  }
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'EbookRequest'}" <${process.env.EMAIL_FROM_ADDRESS || 'noreply@votresite.com'}>`,
+    to: user.email,
+    subject: `Votre demande pour "${bookRequest.title}" a été annulée`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+        <h2 style="color: #ef4444;">Demande annulée</h2>
+        <p>Bonjour ${user.username || 'Utilisateur'},</p>
+        <p>Nous vous informons que votre demande pour le livre <strong>${bookRequest.title}</strong> a été annulée.</p>
+        
+        ${bookRequest.cancelReason ? `
+          <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 12px; margin: 16px 0; border-radius: 4px;">
+            <p style="margin: 0; font-weight: 500; color: #b91c1c;">Raison :</p>
+            <p style="margin: 8px 0 0 0;">${bookRequest.cancelReason}</p>
+          </div>
+        ` : ''}
+        
+        <p>Si vous pensez qu'il s'agit d'une erreur ou si vous avez des questions, n'hésitez pas à nous contacter.</p>
+        
+        <p>Cordialement,<br>L'équipe de support</p>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #757575;">
+          <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Email de notification d'annulation envoyé à ${user.email}`);
+  } catch (error) {
+    console.error(`Erreur lors de l'envoi de l'email d'annulation à ${user.email}:`, error);
+    throw error;
+  }
+};
+
 // Envoie une notification de demande terminée
 export const sendBookCompletedEmail = async (user, bookRequest) => {
   if (!user.notificationPreferences?.email?.enabled || !user.notificationPreferences?.email?.bookCompleted) {
