@@ -86,7 +86,7 @@ export const sendPasswordChangedEmail = async (email, username = 'Utilisateur') 
         
         <p>Si vous n'êtes pas à l'origine de cette modification, veuillez nous contacter immédiatement.</p>
         
-        <p>Cordialement,<br>L'équipe de support</p>
+        <p>Cordialement,<br>L'équipe de support EbookRequest</p>
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #757575;">
           <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
@@ -116,7 +116,7 @@ export const sendVerificationEmail = async (email, token, username = 'Utilisateu
     to: email,
     subject: 'Vérifiez votre adresse email',
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <h2>Bonjour ${username},</h2>
         <p>Merci d'avoir ajouter votre adresse email. Pour finaliser cette ajout, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
         <div style="text-align: center; margin: 30px 0;">
@@ -127,7 +127,10 @@ export const sendVerificationEmail = async (email, token, username = 'Utilisateu
         <p>Si le bouton ne fonctionne pas, vous pouvez copier et coller le lien suivant dans votre navigateur :</p>
         <p>${verificationUrl}</p>
         <p>Ce lien expirera dans 24 heures.</p>
-        <p>A bientôt,<br>L'équipe de support de EbookRequest</p>
+        <p>A bientôt,<br>L'équipe de support EbookRequest</p>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #757575;">
+          <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+        </div>
       </div>
     `
   };
@@ -187,7 +190,7 @@ export const sendRequestCanceledEmail = async (user, bookRequest) => {
         
         <p>Si vous pensez qu'il s'agit d'une erreur ou si vous avez des questions, n'hésitez pas à nous contacter.</p>
         
-        <p>Cordialement,<br>L'équipe de support</p>
+        <p>Cordialement,<br>L'équipe de support EbookRequest</p>
         
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #757575;">
           <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
@@ -216,7 +219,7 @@ export const sendBookCompletedEmail = async (user, bookRequest) => {
     to: user.email,
     subject: `Votre demande de livre est prête : ${bookRequest.title}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
         <h2>Bonjour ${user.username},</h2>
         <p>Votre demande pour le livre <strong>${bookRequest.title}</strong> par ${bookRequest.author} est maintenant terminée !</p>
         <div style="text-align: center; margin: 30px 0;">
@@ -227,6 +230,9 @@ export const sendBookCompletedEmail = async (user, bookRequest) => {
         </div>
         <p>A bientôt,<br>L'équipe de support de EbookRequest</p>
         <p>*Si ce mail atteint votre spam, veuillez le marquer comme non spam et ajouter l'adresse <a href="mailto:${process.env.EMAIL_FROM_ADDRESS}">${process.env.EMAIL_FROM_ADDRESS}</a> à votre liste d'adresses de confiance.</p>
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #757575;">
+          <p>Cet email a été envoyé automatiquement. Merci de ne pas y répondre.</p>
+        </div>
       </div>
     `
   };

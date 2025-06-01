@@ -38,6 +38,10 @@ const bookRequestSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  filePath: {
+    type: String,
+    default: ''
+  },
   status: { 
     type: String, 
     enum: ['pending', 'completed', 'canceled'],

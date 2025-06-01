@@ -39,6 +39,8 @@ services:
     ports:
       - "5001:5001"
     restart: always
+    volumes:
+      - YOUR_PATH:/app/uploads
     environment:
       - MONGODB_URI=YOUR_URI
       - PORT=5001

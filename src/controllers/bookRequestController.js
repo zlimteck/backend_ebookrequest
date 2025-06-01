@@ -2,6 +2,12 @@ import BookRequest from '../models/BookRequest.js';
 import User from '../models/User.js';
 import { sendBookCompletedEmail, sendRequestCanceledEmail } from '../services/emailService.js';
 import pushoverService from '../services/pushoverService.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Création d'une nouvelle demande de livre
 export const createBookRequest = async (req, res) => {
@@ -112,83 +118,43 @@ export const updateRequestStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, reason } = req.body;
-    
+
     if (!['pending', 'completed', 'canceled'].includes(status)) {
       return res.status(400).json({ error: 'Statut invalide' });
     }
-    
-    // Vérification de la raison d'annulation si le statut est 'canceled'
-    if (status === 'canceled' && (!reason || reason.trim() === '')) {
-      return res.status(400).json({ error: 'Une raison est requise pour annuler une demande' });
+
+    const updateFields = { status };
+    if (status === 'canceled' && reason) {
+      updateFields.cancelReason = reason;
+      
+      // Envoyer un email de notification d'annulation
+      try {
+        const requestWithUser = await BookRequest.findById(id).populate('user', 'email username notificationPreferences');
+        if (requestWithUser?.user?.email) {
+          await sendRequestCanceledEmail(requestWithUser.user, {
+            ...requestWithUser.toObject(),
+            cancelReason: reason
+          });
+        }
+      } catch (emailError) {
+        console.error('Erreur lors de l\'envoi de l\'email d\'annulation:', emailError);
+        // Ne pas échouer la requête à cause d'une erreur d'email
+      }
+    } else if (status !== 'canceled') {
+      updateFields.cancelReason = undefined;
     }
-    
-    const updateData = {
-      status,
-      ...(status === 'completed' && { completedAt: new Date() }),
-      ...(status === 'canceled' && { 
-        canceledAt: new Date(),
-        cancelReason: reason
-      })
-    };
-    
-    // Si on réactive une demande annulée, on nettoie les champs d'annulation
-    if (status === 'pending') {
-      updateData.canceledAt = null;
-      updateData.cancelReason = undefined;
+    if (status === 'completed') {
+      updateFields.completedAt = new Date();
     }
-    
+
     const request = await BookRequest.findByIdAndUpdate(
       id,
-      updateData,
+      updateFields,
       { new: true }
     );
-    
+
     if (!request) {
       return res.status(404).json({ error: 'Demande non trouvée' });
-    }
-    
-    // Envoyer une notification Pushover pour les annulations
-    if (status === 'canceled' && request.user) {
-      try {
-        const user = await User.findById(request.user);
-        if (user) {
-          // Envoyer une notification Pushover
-          await pushoverService.sendNotification(
-            '❌ Demande annulée',
-            `Votre demande pour le livre a été annulée.
-            
-📖 Titre: ${request.title}
-✍️ Auteur: ${request.author}
-📝 Raison: ${reason}`,
-            {
-              priority: 0,
-              sound: 'falling',
-              url: `${process.env.FRONTEND_URL}/dashboard`,
-              url_title: 'Voir le tableau de bord',
-              html: 1
-            }
-          );
-
-          // Envoyer un email de notification d'annulation
-          try {
-            await sendRequestCanceledEmail(
-              {
-                email: user.email,
-                username: user.username
-              },
-              {
-                title: request.title,
-                author: request.author,
-                cancelReason: reason
-              }
-            );
-          } catch (emailError) {
-            console.error('Erreur lors de l\'envoi de l\'email d\'annulation:', emailError);
-          }
-        }
-      } catch (pushoverError) {
-        console.error('Erreur lors de l\'envoi de la notification Pushover:', pushoverError);
-      }
     }
     
     res.json(request);
@@ -198,47 +164,140 @@ export const updateRequestStatus = async (req, res) => {
   }
 };
 
-// Ajout d'un lien de téléchargement à une demande
-export const addDownloadLink = async (req, res) => {
+export const downloadEbook = async (req, res) => {
   try {
     const { id } = req.params;
-    const { downloadLink } = req.body;
-    
-    if (!downloadLink) {
-      return res.status(400).json({ error: 'Le lien de téléchargement est requis' });
-    }
-    
-    const request = await BookRequest.findByIdAndUpdate(
-      id,
-      { 
-        downloadLink,
-        status: 'completed',
-        completedAt: new Date()
-      },
-      { new: true }
-    );
+    const request = await BookRequest.findById(id);
     
     if (!request) {
       return res.status(404).json({ error: 'Demande non trouvée' });
     }
     
-    // Récupérer l'utilisateur pour envoyer une notification email
+    // Vérifier si c'est un fichier local ou un lien externe
+    if (request.filePath) {
+      // Téléchargement d'un fichier local
+      const filePath = path.join(__dirname, '../../uploads', request.filePath);
+      
+      // Vérifier que le fichier existe
+      if (!fs.existsSync(filePath)) {
+        console.error(`Fichier introuvable: ${filePath}`);
+        return res.status(404).json({ 
+          error: 'Fichier introuvable sur le serveur',
+          details: `Le fichier ${request.filePath} n'existe pas dans le répertoire de téléchargement`
+        });
+      }
+      
+      // Mettre à jour la date de téléchargement
+      request.downloadedAt = new Date();
+      await request.save();
+      
+      // Définir les en-têtes pour le téléchargement
+      const fileName = path.basename(filePath);
+      res.download(filePath, fileName, (err) => {
+        if (err) {
+          console.error('Erreur lors de l\'envoi du fichier:', err);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Erreur lors de l\'envoi du fichier' });
+          }
+        }
+      });
+      
+    } else if (request.downloadLink) {
+      // Redirection vers un lien externe
+      request.downloadedAt = new Date();
+      await request.save();
+      return res.redirect(request.downloadLink);
+      
+    } else {
+      return res.status(404).json({ 
+        error: 'Aucun contenu de téléchargement disponible pour cette demande' 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erreur lors du téléchargement du fichier:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Erreur lors du téléchargement du fichier',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+};
+
+// Ajout d'un lien de téléchargement ou d'un fichier à une demande
+export const addDownloadLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { downloadLink } = req.body;
+    const file = req.file; // Fichier téléversé via multer
+    
+    const updateData = {
+      status: 'completed',
+      completedAt: new Date()
+    };
+    
+    // Si un fichier a été téléversé
+    if (file) {
+      updateData.filePath = `books/${file.filename}`;
+      updateData.downloadLink = ''; // Effacer l'ancien lien s'il existe
+      console.log(`Fichier téléversé: ${file.filename}`);
+    } 
+    // Sinon, vérifier le lien
+    else if (downloadLink) {
+      try {
+        const url = new URL(downloadLink);
+        if (!/^https?:/.test(url.protocol)) {
+          return res.status(400).json({ error: 'Le lien doit commencer par http:// ou https://' });
+        }
+        updateData.downloadLink = downloadLink;
+        updateData.filePath = ''; // Effacer l'ancien fichier s'il existe
+        console.log(`Lien de téléchargement ajouté: ${downloadLink}`);
+      } catch (error) {
+        return res.status(400).json({ error: "Le lien fourni n'est pas une URL valide" });
+      }
+    } else {
+      return res.status(400).json({ error: "Un lien de téléchargement ou un fichier est requis" });
+    }
+    
+    const request = await BookRequest.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!request) {
+      return res.status(404).json({ error: 'Demande non trouvée' });
+    }
+    
+    // Récupérer l'utilisateur pour l'email
     const user = await User.findById(request.user);
     if (user) {
-      // Envoyer une notification par email si activée
-      if (user.notificationPreferences?.email?.enabled && user.notificationPreferences?.email?.bookCompleted) {
-        try {
-          await sendBookCompletedEmail(user, request);
-        } catch (emailError) {
-          console.error('Erreur lors de l\'envoi de l\'email de notification:', emailError);
+      try {
+        // Construire l'URL de téléchargement
+        let downloadUrl = '';
+        
+        if (updateData.filePath) {
+          // Pour les fichiers téléversés, utiliser l'API de téléchargement
+          downloadUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/requests/download/${request._id}`;
+        } else if (updateData.downloadLink) {
+          // Pour les liens externes, utiliser directement le lien
+          downloadUrl = updateData.downloadLink;
         }
+        
+        // Envoyer l'email de notification
+        await sendBookCompletedEmail(user, {
+          ...request.toObject(),
+          downloadLink: downloadUrl
+        });
+      } catch (emailError) {
+        console.error('Erreur lors de l\'envoi de l\'email de notification:', emailError);
       }
     }
     
     res.json(request);
   } catch (error) {
     console.error('Erreur lors de l\'ajout du lien de téléchargement:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'ajout du lien de téléchargement' });
+    res.status(500).json({ 
+      error: 'Erreur lors de l\'ajout du lien de téléchargement',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
