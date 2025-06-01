@@ -22,26 +22,32 @@ const PORT = process.env.PORT || 5001;
 // Configuration CORS dynamique basée sur les variables d'environnement
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
+    // En développement, autoriser toutes les origines
+    if (process.env.NODE_ENV === 'development' || !origin) {
+      return callback(null, true);
+    }
+
     const allowedOrigins = [
       process.env.FRONTEND_URL,
       process.env.REACT_APP_API_URL,
     ].filter(Boolean);
-    
+
     // Vérifier si l'origine est autorisée
     if (allowedOrigins.some(allowedOrigin => 
       origin === allowedOrigin || 
-      origin.startsWith(allowedOrigin.replace(/^https?:\/\//, 'http://'))
+      origin.startsWith(allowedOrigin.replace(/^https?:\/\//, 'http://')) ||
+      origin.startsWith(allowedOrigin.replace(/^https?:\/\//, 'https://'))
     )) {
       callback(null, true);
     } else {
-      console.warn('Tentative d\'accès non autorisée depuis l\'origine :', origin);
+      console.warn('Tentative d\'accès non autorisée depuis :', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Disposition']
 };
 
 app.use(cors(corsOptions));
