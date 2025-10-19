@@ -11,6 +11,7 @@ import userRoutes from './routes/user.js';
 import adminUserRoutes from './routes/users.js';
 import adminRoutes from './routes/admin.js';
 import activityRoutes from './routes/activity.js';
+import availabilityRoutes from './routes/availability.js';
 
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
@@ -64,6 +65,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/availability', availabilityRoutes);
 
 // Route test
 app.get('/', (req, res) => {
