@@ -119,7 +119,7 @@ export const updateRequestStatus = async (req, res) => {
     const { id } = req.params;
     const { status, reason } = req.body;
 
-    if (!['pending', 'completed', 'canceled'].includes(status)) {
+    if (!['pending', 'completed', 'canceled', 'reported'].includes(status)) {
       return res.status(400).json({ error: 'Statut invalide' });
     }
 
@@ -334,7 +334,7 @@ export const deleteRequest = async (req, res) => {
 export const markAsDownloaded = async (req, res) => {
   try {
     const request = await BookRequest.findById(req.params.id);
-    
+
     if (!request) {
       return res.status(404).json({ error: 'Demande non trouvée.' });
     }
@@ -348,13 +348,76 @@ export const markAsDownloaded = async (req, res) => {
     request.downloadedAt = new Date();
     await request.save();
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       downloadedAt: request.downloadedAt,
-      message: 'Téléchargement enregistré avec succès.' 
+      message: 'Téléchargement enregistré avec succès.'
     });
   } catch (error) {
     console.error('Erreur lors du marquage comme téléchargé:', error);
     res.status(500).json({ error: 'Erreur lors du marquage comme téléchargé.' });
+  }
+};
+
+// Signaler un problème sur une demande complétée
+export const reportRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({ error: 'Une raison de signalement est requise.' });
+    }
+
+    const request = await BookRequest.findById(id);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Demande non trouvée.' });
+    }
+
+    // Vérifier que l'utilisateur est le propriétaire de la demande
+    if (request.user.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Vous ne pouvez signaler que vos propres demandes.' });
+    }
+
+    // Vérifier que la demande est complétée
+    if (request.status !== 'completed') {
+      return res.status(400).json({ error: 'Seules les demandes complétées peuvent être signalées.' });
+    }
+
+    // Mettre à jour le statut et ajouter la raison
+    request.status = 'reported';
+    request.reportedAt = new Date();
+    request.reportReason = reason;
+
+    await request.save();
+
+    // Envoyer une notification Pushover aux admins
+    try {
+      await pushoverService.sendNotification(
+        '⚠️ Signalement d\'un problème',
+        `📚 Livre: ${request.title}
+👤 Utilisateur: ${request.username}
+⚠️ Raison: ${reason}`,
+        {
+          priority: 1,
+          sound: 'persistent',
+          url: `${process.env.FRONTEND_URL}/admin`,
+          url_title: 'Voir dans l\'admin',
+          html: 1
+        }
+      );
+    } catch (pushoverError) {
+      console.error('Erreur lors de l\'envoi de la notification Pushover:', pushoverError);
+    }
+
+    res.json({
+      success: true,
+      message: 'Signalement envoyé avec succès. Un administrateur va examiner le problème.',
+      request
+    });
+  } catch (error) {
+    console.error('Erreur lors du signalement:', error);
+    res.status(500).json({ error: 'Erreur lors du signalement de la demande.' });
   }
 };

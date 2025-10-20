@@ -1,5 +1,5 @@
 import express from 'express';
-import { 
+import {
   createBookRequest,
   getUserRequests,
   getAllRequests,
@@ -7,7 +7,8 @@ import {
   addDownloadLink,
   deleteRequest,
   markAsDownloaded,
-  downloadEbook
+  downloadEbook,
+  reportRequest
 } from '../controllers/bookRequestController.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import upload from '../middleware/upload.js';
@@ -27,9 +28,9 @@ router.get('/all', requireAuth, requireAdmin, getAllRequests);
 router.patch('/:id/status', requireAuth, requireAdmin, updateRequestStatus);
 
 // Ajouter un lien de téléchargement ou uploader un fichier (admin uniquement)
-router.patch('/:id/download-link', 
-  requireAuth, 
-  requireAdmin, 
+router.patch('/:id/download-link',
+  requireAuth,
+  requireAdmin,
   upload.single('file'),
   addDownloadLink
 );
@@ -39,6 +40,10 @@ router.get('/download/:id', requireAuth, downloadEbook);
 
 // Marquer comme téléchargé
 router.put('/:id/mark-downloaded', requireAuth, markAsDownloaded);
+
+// Signaler un problème sur une demande
+router.post('/:id/report', requireAuth, reportRequest);
+
 router.delete('/:id', requireAuth, requireAdmin, deleteRequest);
 
 export default router;

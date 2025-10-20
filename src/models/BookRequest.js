@@ -42,11 +42,11 @@ const bookRequestSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  status: { 
-    type: String, 
-    enum: ['pending', 'completed', 'canceled'],
+  status: {
+    type: String,
+    enum: ['pending', 'completed', 'canceled', 'reported'],
     default: 'pending',
-    required: true 
+    required: true
   },
   // Suivi des téléchargements
   downloadedAt: {
@@ -63,11 +63,17 @@ const bookRequestSchema = new mongoose.Schema({
       seen: { type: Boolean, default: false },
       seenAt: { type: Date },
       reason: { type: String }
+    },
+    reported: {
+      seen: { type: Boolean, default: false },
+      seenAt: { type: Date }
     }
   },
   completedAt: { type: Date },
   canceledAt: { type: Date },
   cancelReason: { type: String },
+  reportedAt: { type: Date },
+  reportReason: { type: String },
   createdAt: { type: Date, default: Date.now },
 }, {
   timestamps: true

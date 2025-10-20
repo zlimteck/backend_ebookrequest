@@ -16,8 +16,9 @@ export const getAdminStats = async (req, res) => {
     const pendingRequests = await BookRequest.countDocuments({ status: 'pending' });
     const completedRequests = await BookRequest.countDocuments({ status: 'completed' });
     const cancelledRequests = await BookRequest.countDocuments({ status: 'canceled' });
-    const completionRate = totalRequests > 0 
-      ? Math.round((completedRequests / totalRequests) * 100) 
+    const reportedRequests = await BookRequest.countDocuments({ status: 'reported' });
+    const completionRate = totalRequests > 0
+      ? Math.round((completedRequests / totalRequests) * 100)
       : 0;
     res.status(200).json({
       success: true,
@@ -30,6 +31,7 @@ export const getAdminStats = async (req, res) => {
           pending: pendingRequests,
           completed: completedRequests,
           cancelled: cancelledRequests,
+          reported: reportedRequests,
           completionRate: completionRate
         }
       }
