@@ -239,7 +239,7 @@ export async function checkBookAvailability(title, author) {
       return {
         available: true,
         confidence: 'high',
-        message: 'Ce livre est disponible ! Votre demande devrait être traitée rapidement.',
+        message: 'Une release est disponible ! Votre requête devrait être traitée rapidement.',
         match: bestMatch,
         score: bestScore
       };
@@ -247,7 +247,7 @@ export async function checkBookAvailability(title, author) {
       return {
         available: true,
         confidence: 'medium',
-        message: 'Un livre similaire est disponible. Votre demande pourrait être traitée rapidement.',
+        message: 'Une release semble être disponible. Votre requête pourrait être traitée rapidement.',
         match: bestMatch,
         score: bestScore
       };
@@ -255,7 +255,7 @@ export async function checkBookAvailability(title, author) {
       return {
         available: false,
         confidence: 'low',
-        message: 'Ce livre ne semble pas immédiatement disponible. Le traitement pourrait prendre plus de temps.',
+        message: 'Aucune release ne semble disponible. Le traitement de votre requête pourrait prendre du temps.',
         match: bestMatch,
         score: bestScore
       };
