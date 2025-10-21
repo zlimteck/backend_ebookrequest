@@ -12,6 +12,9 @@ import adminUserRoutes from './routes/users.js';
 import adminRoutes from './routes/admin.js';
 import activityRoutes from './routes/activity.js';
 import availabilityRoutes from './routes/availability.js';
+import trendingRoutes from './routes/trending.js';
+import bestsellerRoutes from './routes/bestsellers.js';
+import { initializeTrendingBooksCache } from './services/trendingBooksService.js';
 
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
@@ -66,6 +69,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/availability', availabilityRoutes);
+app.use('/api/trending', trendingRoutes);
+app.use('/api/admin/bestsellers', bestsellerRoutes);
 
 // Route test
 app.get('/', (req, res) => {
@@ -79,6 +84,9 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => {
   app.listen(PORT, () => {
     console.log(`Serveur backend lancé sur le port ${PORT}`);
+
+    // Initialiser le cache des livres tendance au démarrage (sans bloquer le serveur)
+    initializeTrendingBooksCache();
   });
 })
 .catch((error) => console.error('Erreur de connexion MongoDB:', error));
