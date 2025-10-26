@@ -14,6 +14,7 @@ import activityRoutes from './routes/activity.js';
 import availabilityRoutes from './routes/availability.js';
 import trendingRoutes from './routes/trending.js';
 import bestsellerRoutes from './routes/bestsellers.js';
+import recommendationRoutes from './routes/recommendations.js';
 import { initializeTrendingBooksCache } from './services/trendingBooksService.js';
 
 if (process.env.NODE_ENV !== 'production') {
@@ -71,6 +72,7 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/trending', trendingRoutes);
 app.use('/api/admin/bestsellers', bestsellerRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // Route test
 app.get('/', (req, res) => {
