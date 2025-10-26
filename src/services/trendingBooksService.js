@@ -5,7 +5,7 @@ const GOOGLE_BOOKS_API_KEY = process.env.GOOGLE_BOOKS_API_KEY;
 
 // Cache pour les livres tendance par catégorie
 let cachedBooksByCategory = {};
-let lastFetchTime = null;
+let lastFetchTimeByCategory = {}; // Timestamp par catégorie
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
 
 // Définition des catégories disponibles
@@ -21,10 +21,12 @@ export const BOOK_CATEGORIES = {
 
 // Récupère les livres tendance avec cache de 24h (par catégorie)
 export async function getTrendingBooks(category = BOOK_CATEGORIES.ALL) {
-  // Vérifier si le cache est encore valide
+  // Vérifier si le cache est encore valide pour cette catégorie spécifique
   const now = Date.now();
-  if (cachedBooksByCategory[category] && lastFetchTime && (now - lastFetchTime) < CACHE_DURATION) {
-    const remainingTime = Math.round((CACHE_DURATION - (now - lastFetchTime)) / 1000 / 60 / 60);
+  const categoryLastFetch = lastFetchTimeByCategory[category];
+
+  if (cachedBooksByCategory[category] && categoryLastFetch && (now - categoryLastFetch) < CACHE_DURATION) {
+    const remainingTime = Math.round((CACHE_DURATION - (now - categoryLastFetch)) / 1000 / 60 / 60);
     console.log(`📦 Utilisation du cache pour "${category}" (rafraîchissement dans ${remainingTime}h)`);
     return cachedBooksByCategory[category];
   }
@@ -33,9 +35,9 @@ export async function getTrendingBooks(category = BOOK_CATEGORIES.ALL) {
   console.log(`🔄 Récupération de nouveaux livres pour la catégorie "${category}"...`);
   const books = await fetchTrendingBooks(category);
 
-  // Mettre à jour le cache
+  // Mettre à jour le cache pour cette catégorie spécifique
   cachedBooksByCategory[category] = books;
-  lastFetchTime = now;
+  lastFetchTimeByCategory[category] = now;
 
   return books;
 }
@@ -116,7 +118,7 @@ export async function initializeTrendingBooksCache() {
 // Fonction pour vider le cache (appelée quand on modifie les bestsellers)
 export function clearTrendingBooksCache() {
   cachedBooksByCategory = {};
-  lastFetchTime = null;
+  lastFetchTimeByCategory = {};
   console.log('🗑️  Cache des livres tendance vidé');
 }
 

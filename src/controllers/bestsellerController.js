@@ -1,5 +1,6 @@
 import Bestseller from '../models/Bestseller.js';
 import { clearTrendingBooksCache } from '../services/trendingBooksService.js';
+import { generateBestsellers } from '../services/bestsellerGeneratorService.js';
 
 // Récupérer tous les bestsellers (avec filtre optionnel par catégorie)
 export const getBestsellers = async (req, res) => {
@@ -164,6 +165,37 @@ export const reorderBestsellers = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Erreur lors de la réorganisation'
+    });
+  }
+};
+
+// Générer automatiquement les bestsellers du mois avec l'IA
+export const generateBestsellersWithAI = async (req, res) => {
+  try {
+    const { categories } = req.body;
+
+    console.log('Génération des bestsellers avec l\'IA...', { categories });
+
+    const result = await generateBestsellers(categories);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la génération des bestsellers'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      bestsellers: result.bestsellers,
+      month: result.month,
+      message: result.message
+    });
+  } catch (error) {
+    console.error('Erreur lors de la génération des bestsellers:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Erreur lors de la génération des bestsellers'
     });
   }
 };
