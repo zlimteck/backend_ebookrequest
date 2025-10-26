@@ -57,6 +57,8 @@ services:
       - EMAIL_FROM_NAME=EbookRequest
       - FRONTEND_URL=YOUR_FRONTEND_URL_OR_IP:PORT_FRONTEND
       - NODE_ENV=production
+      - OLLAMA_URL=YOUR_OLLAMA_URL
+      - OLLAMA_MODEL=YOUR_OLLAMA_MODEL #ex: llama3:8b
     networks:
       - app-network
 
