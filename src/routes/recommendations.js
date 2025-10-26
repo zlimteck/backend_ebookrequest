@@ -20,7 +20,7 @@ router.get('/', requireAuth, async (req, res) => {
     console.log(`Génération de ${limit} recommandations pour l'utilisateur ${req.user.username} basées sur ${bookRequests.length} demandes`);
 
     // Générer les recommandations via Ollama
-    const result = await generateRecommendations(bookRequests, limit);
+    const result = await generateRecommendations(bookRequests, limit, userId, req.user.username);
 
     res.json({
       success: true,

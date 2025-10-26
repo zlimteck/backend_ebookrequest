@@ -1,5 +1,7 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import AIRequestLog from '../models/AIRequestLog.js';
 
 dotenv.config();
 
@@ -7,8 +9,10 @@ const OLLAMA_URL = process.env.OLLAMA_URL;
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 const GOOGLE_BOOKS_API_KEY = process.env.GOOGLE_BOOKS_API_KEY;
 
-// énère les bestsellers du mois pour les catégories spécifiées
-export const generateBestsellers = async (categories = []) => {
+// Génère les bestsellers du mois pour les catégories spécifiées
+export const generateBestsellers = async (categories = [], userId = null, username = 'admin') => {
+  const startTime = Date.now();
+
   try {
     if (!categories || categories.length === 0) {
       categories = ['Roman', 'Science-Fiction', 'Thriller', 'Fantasy', 'Romance'];
@@ -38,11 +42,30 @@ export const generateBestsellers = async (categories = []) => {
 
     console.log('Réponse reçue de Ollama pour bestsellers');
 
+    const responseTime = Date.now() - startTime;
+
     // Parser la réponse
     let bestsellers = parseBestsellers(response.data.response, categories);
 
     // Enrichir avec Google Books API
     bestsellers = await enrichBestsellersWithGoogleBooks(bestsellers);
+
+    // Logger la requête réussie
+    if (userId) {
+      try {
+        await AIRequestLog.create({
+          userId,
+          username,
+          requestType: 'bestseller',
+          model: OLLAMA_MODEL,
+          success: true,
+          responseTime,
+          tokensUsed: response.data.eval_count || null
+        });
+      } catch (logError) {
+        console.error('Erreur lors du logging de la requête IA:', logError.message);
+      }
+    }
 
     return {
       success: true,
@@ -53,6 +76,25 @@ export const generateBestsellers = async (categories = []) => {
 
   } catch (error) {
     console.error('Erreur lors de la génération des bestsellers:', error.message);
+
+    const responseTime = Date.now() - startTime;
+
+    // Logger la requête échouée
+    if (userId) {
+      try {
+        await AIRequestLog.create({
+          userId,
+          username,
+          requestType: 'bestseller',
+          model: OLLAMA_MODEL,
+          success: false,
+          errorMessage: error.message,
+          responseTime
+        });
+      } catch (logError) {
+        console.error('Erreur lors du logging de la requête IA:', logError.message);
+      }
+    }
 
     if (error.code === 'ECONNREFUSED') {
       throw new Error('Impossible de se connecter au serveur Ollama');

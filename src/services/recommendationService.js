@@ -1,5 +1,7 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import AIRequestLog from '../models/AIRequestLog.js';
 
 dotenv.config();
 
@@ -8,7 +10,10 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL;
 const GOOGLE_BOOKS_API_KEY = process.env.GOOGLE_BOOKS_API_KEY;
 
 // Génère des recommandations de livres basées sur l'historique des demandes
-export const generateRecommendations = async (bookRequests, limit = 5) => {
+export const generateRecommendations = async (bookRequests, limit = 5, userId = null, username = 'anonymous') => {
+  const startTime = Date.now();
+  let logEntry = null;
+
   try {
     // Vérifier qu'il y a des demandes de livres
     if (!bookRequests || bookRequests.length === 0) {
@@ -47,11 +52,30 @@ export const generateRecommendations = async (bookRequests, limit = 5) => {
 
     console.log('Réponse reçue de Ollama');
 
+    const responseTime = Date.now() - startTime;
+
     // Parser la réponse
     let recommendations = parseRecommendations(response.data.response);
 
     // Enrichir avec les couvertures de Google Books
     recommendations = await enrichWithGoogleBooksCovers(recommendations);
+
+    // Logger la requête réussie
+    if (userId) {
+      try {
+        logEntry = await AIRequestLog.create({
+          userId,
+          username,
+          requestType: 'recommendation',
+          model: OLLAMA_MODEL,
+          success: true,
+          responseTime,
+          tokensUsed: response.data.eval_count || null
+        });
+      } catch (logError) {
+        console.error('Erreur lors du logging de la requête IA:', logError.message);
+      }
+    }
 
     return {
       recommendations,
@@ -62,6 +86,25 @@ export const generateRecommendations = async (bookRequests, limit = 5) => {
 
   } catch (error) {
     console.error('Erreur lors de la génération de recommandations:', error.message);
+
+    const responseTime = Date.now() - startTime;
+
+    // Logger la requête échouée
+    if (userId) {
+      try {
+        await AIRequestLog.create({
+          userId,
+          username,
+          requestType: 'recommendation',
+          model: OLLAMA_MODEL,
+          success: false,
+          errorMessage: error.message,
+          responseTime
+        });
+      } catch (logError) {
+        console.error('Erreur lors du logging de la requête IA:', logError.message);
+      }
+    }
 
     if (error.code === 'ECONNREFUSED') {
       throw new Error('Impossible de se connecter au serveur Ollama. Vérifiez que le service est actif.');

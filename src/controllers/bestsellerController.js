@@ -176,7 +176,7 @@ export const generateBestsellersWithAI = async (req, res) => {
 
     console.log('Génération des bestsellers avec l\'IA...', { categories });
 
-    const result = await generateBestsellers(categories);
+    const result = await generateBestsellers(categories, req.user.id, req.user.username);
 
     if (!result.success) {
       return res.status(500).json({
